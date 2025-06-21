@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        .chart-container { 
+            margin: 20px; 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            border-radius: 5px;
+        }
+        canvas { 
+            max-width: 800px; 
+            height: 400px !important;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 5px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Stock Price Charts</h1>
+    <div id="charts"></div>
+    <script>
+        fetch('charts.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const chartsDiv = document.getElementById('charts');
+                if (Object.keys(data).length === 0) {
+                    chartsDiv.innerHTML = '<div class="error">No chart data available. Please run the stock analysis script first.</div>';
+                    return;
+                }
+                
+                Object.keys(data).forEach(ticker => {
+                    const container = document.createElement('div');
+                    container.className = 'chart-container';
+                    
+                    const title = document.createElement('h3');
+                    title.textContent = ticker;
+                    container.appendChild(title);
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `${ticker}-chart`;
+                    container.appendChild(canvas);
+                    chartsDiv.appendChild(container);
+                    
+                    try {
+                        new Chart(canvas, data[ticker]);
+                    } catch (error) {
+                        console.error(`Error creating chart for ${ticker}:`, error);
+                        container.innerHTML = `<div class="error">Error displaying chart for ${ticker}: ${error.message}</div>`;
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading charts:', error);
+                document.getElementById('charts').innerHTML = 
+                    `<div class="error">Error loading chart data: ${error.message}. Please make sure charts.json exists and run the stock analysis script first.</div>`;
+            });
+    </script>
+</body>
+</html>
