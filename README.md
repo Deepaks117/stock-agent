@@ -4,36 +4,19 @@ A Python-based stock analysis tool that provides technical analysis, sentiment a
 
 ## Features
 
-- **Technical Analysis**: Calculates Moving Averages (MA20, MA50), RSI indicators, MACD, OBV, ATR
+- **Technical Analysis**: Calculates Moving Averages (MA20, MA50), RSI indicators
 - **News Sentiment Analysis**: Analyzes market sentiment using NewsAPI
 - **Macroeconomic Data**: Fetches Treasury yields and CPI data from Alpha Vantage
 - **Stock Fundamentals**: Retrieves P/E ratios and earnings data
 - **Interactive Charts**: Visualizes stock price trends using Chart.js
 - **Investment Recommendations**: Provides Buy/Sell/Hold recommendations based on multiple factors
 - **Position Tracking**: Monitors existing positions and profit/loss
-- **Backtesting**: Robust event-driven backtesting with flexible filter tuning and multi-ticker support
 
-## Backtesting Workflow (New!)
+## Screenshots
 
-- The `backtest_ema.py` script now supports running backtests for a list of tickers (e.g., RELIANCE.NS, TCS.NS, INFY.NS).
-- The strategy uses a combination of EMA crossovers, MACD crossovers, ATR-based stop-loss, and can be easily tuned for additional filters.
-- Results for each ticker are printed with clear labels for easy comparison.
-- You can further tune the filters and parameters in the script to experiment with different strategies.
-
-### How to Use the Backtest Script
-
-1. **Edit the ticker list** at the top of `backtest_ema.py`:
-   ```python
-   TICKERS = ["RELIANCE.NS", "TCS.NS", "INFY.NS"]
-   ```
-2. **Run the script:**
-   ```bash
-   python backtest_ema.py
-   ```
-3. **Interpret the results:**
-   - For each ticker, you'll see a summary of performance stats (return, drawdown, win rate, etc.).
-   - Compare the results to buy-and-hold to evaluate your strategy's effectiveness.
-   - Adjust filters and parameters as needed to improve performance.
+- Stock price charts with technical indicators
+- Investment recommendations with detailed reasoning
+- News sentiment analysis results
 
 ## Installation
 
@@ -60,22 +43,46 @@ A Python-based stock analysis tool that provides technical analysis, sentiment a
 
 4. **Install dependencies**
    ```bash
-   pip install -r requirements.txt
+   pip install yfinance pandas numpy requests textblob python-dotenv
    ```
+
+5. **Set up environment variables**
+   Create a `.env` file in the project root with your API keys:
+   ```
+   NEWS_API_KEY=your_news_api_key_here
+   ALPHA_VANTAGE_KEY=your_alpha_vantage_key_here
+   ```
+
+## Usage
+
+1. **Run the stock analysis**
+   ```bash
+   python stock_agent.py
+   ```
+
+2. **View interactive charts**
+   ```bash
+   python -m http.server 8000
+   ```
+   Then open `http://localhost:8000/chart.html` in your browser.
 
 ## Configuration
 
-Edit `backtest_ema.py` to modify:
-- Stock tickers to analyze (`TICKERS` list)
-- Analysis period (default: 5 years)
-- Technical indicators and filter logic
+Edit `stock_agent.py` to modify:
+- Stock tickers to analyze (`STOCK_TICKERS` list)
+- Analysis period (default: 3 months)
+- Technical indicators parameters
+
+## API Keys Required
+
+- **NewsAPI**: Get free key from [newsapi.org](https://newsapi.org)
+- **Alpha Vantage**: Get free key from [alphavantage.co](https://alphavantage.co)
 
 ## Project Structure
 
 ```
 stock-agent/
 ├── stock_agent.py          # Main analysis script
-├── backtest_ema.py         # Event-driven backtesting script (multi-ticker)
 ├── chart.html              # Interactive charts interface
 ├── charts.json             # Generated chart data
 ├── stock_recommendations.txt # Analysis history
@@ -85,16 +92,35 @@ stock-agent/
 └── .env                   # API keys (not in repo)
 ```
 
-## Dependencies
+## Features in Detail
 
-- yfinance
-- pandas
-- numpy
-- pandas-ta
-- backtesting
-- requests
-- textblob
-- python-dotenv
+### Technical Analysis
+- 20-day and 50-day moving averages
+- 14-day RSI (Relative Strength Index)
+- Price trend analysis
+
+### Sentiment Analysis
+- Analyzes recent news articles
+- Calculates sentiment scores
+- Considers market sentiment in recommendations
+
+### Investment Logic
+- Combines technical, fundamental, and sentiment analysis
+- Provides weighted scoring system
+- Generates actionable recommendations
+
+### Risk Management
+- Tracks existing positions
+- Monitors profit/loss percentages
+- Provides sell signals based on performance
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
@@ -102,4 +128,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Disclaimer
 
-This tool is for educational and research purposes only. It should not be considered as financial advice. Always do your own research and consult with financial professionals before making investment decisions. 
+This tool is for educational and research purposes only. It should not be considered as financial advice. Always do your own research and consult with financial professionals before making investment decisions.
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on GitHub. 

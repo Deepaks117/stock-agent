@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Agent - Event-Driven Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        .container { max-width: 800px; margin-top: 30px; }
+        .result-box { margin-top: 30px; }
+        .chart-container { margin-top: 30px; height: 400px; }
+        .confidence-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .score-positive { background-color: #d4edda; color: #155724; }
+        .score-negative { background-color: #f8d7da; color: #721c24; }
+        .score-neutral { background-color: #fff3cd; color: #856404; }
+        .reason-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .reason-item:last-child { border-bottom: none; }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .fundamental-data {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="mb-4 text-center">📈 Stock Analysis Agent</h1>
+    <p class="text-center text-muted mb-4">Event-Driven Analysis with Triple EMA Crossover Strategy</p>
+    
+    <form id="stockForm">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="ticker" class="form-label">Stock Ticker</label>
+                    <input type="text" class="form-control" id="ticker" name="ticker" 
+                           placeholder="e.g., TCS.NS, RELIANCE.NS" required>
+                    <div class="form-text">Use Yahoo Finance format (e.g., TCS.NS for NSE)</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Do you own this stock?</label>
+                    <div>
+                        <input type="radio" id="ownYes" name="own" value="yes">
+                        <label for="ownYes">Yes, I own it</label>
+                        <input type="radio" id="ownNo" name="own" value="no" checked>
+                        <label for="ownNo">No, I'm considering</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="buyInfo" style="display:none;">
+            <div class="mb-3">
+                <label for="buyPrice" class="form-label">Buy Price (INR)</label>
+                <input type="number" step="0.01" class="form-control" id="buyPrice" name="buyPrice" 
+                       placeholder="Enter the price you bought at">
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary w-100" id="analyzeBtn">
+            <span id="btnText">Analyze Stock</span>
+            <span id="btnSpinner" style="display:none;">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Analyzing...
+            </span>
+        </button>
+    </form>
+
+    <div class="result-box" id="resultBox" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Analysis Results for <span id="resultTicker"></span></h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4>Recommendation: <span id="recommendation" class="badge"></span></h4>
+                        <div id="confidenceScore" class="confidence-score"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fundamental-data">
+                            <h5>Current Price</h5>
+                            <p class="h4">₹<span id="currentPrice"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h5>Key Reasons:</h5>
+                        <ul id="reasons" class="list-unstyled"></ul>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="fundamentalData" class="fundamental-data">
+                            <h5>Fundamental Data</h5>
+                            <div id="fundamentalDetails"></div>
+                        </div>
+                        <div id="sentimentData" class="fundamental-data">
+                            <h5>Market Sentiment</h5>
+                            <div id="sentimentDetails"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="positionInfo" class="alert alert-info mt-3" style="display:none;"></div>
+                
+                <div class="chart-container">
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorBox" class="alert alert-danger mt-4" style="display:none;"></div>
+</div>
+
+<script>
+    // Toggle buy price input based on ownership
+    document.querySelectorAll('input[name="own"]').forEach(el => {
+        el.addEventListener('change', function() {
+            document.getElementById('buyInfo').style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+    });
+
+    let chartInstance = null;
+
+    document.getElementById('stockForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        document.getElementById('resultBox').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'none';
+        document.getElementById('btnText').style.display = 'none';
+        document.getElementById('btnSpinner').style.display = 'inline';
+        document.getElementById('analyzeBtn').disabled = true;
+
+        const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+        const own = document.querySelector('input[name="own"]:checked').value;
+        const buyPrice = own === 'yes' ? document.getElementById('buyPrice').value : '';
+
+        fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker, buy_price: buyPrice })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            // Display results
+            displayResults(data);
+        })
+        .catch(err => {
+            document.getElementById('errorBox').textContent = 'Error: ' + err.message;
+            document.getElementById('errorBox').style.display = 'block';
+        })
+        .finally(() => {
+            // Reset button state
+            document.getElementById('btnText').style.display = 'inline';
+            document.getElementById('btnSpinner').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = false;
+        });
+    });
+
+    function displayResults(data) {
+        // Set ticker
+        document.getElementById('resultTicker').textContent = data.ticker;
+        
+        // Set recommendation with color coding
+        const recommendationEl = document.getElementById('recommendation');
+        recommendationEl.textContent = data.recommendation;
+        recommendationEl.className = 'badge ' + getRecommendationClass(data.recommendation);
+        
+        // Set confidence score
+        const scoreEl = document.getElementById('confidenceScore');
+        scoreEl.textContent = `Confidence Score: ${data.confidence_score.toFixed(1)}`;
+        scoreEl.className = 'confidence-score ' + getScoreClass(data.confidence_score);
+        
+        // Set current price
+        document.getElementById('currentPrice').textContent = data.current_price.toFixed(2);
+        
+        // Set reasons
+        const reasonsList = document.getElementById('reasons');
+        reasonsList.innerHTML = '';
+        data.reasons.forEach(reason => {
+            const li = document.createElement('li');
+            li.className = 'reason-item';
+            li.textContent = reason;
+            reasonsList.appendChild(li);
+        });
+        
+        // Set fundamental data
+        const fundamentalEl = document.getElementById('fundamentalDetails');
+        fundamentalEl.innerHTML = `
+            <p><strong>P/E Ratio:</strong> ${data.micro_data.pe_ratio ? data.micro_data.pe_ratio.toFixed(2) : 'N/A'}</p>
+            <p><strong>Dividend Yield:</strong> ${data.micro_data.dividend_yield ? (data.micro_data.dividend_yield * 100).toFixed(2) + '%' : 'N/A'}</p>
+            <p><strong>EPS:</strong> ${data.micro_data.latest_eps ? data.micro_data.latest_eps.toFixed(2) : 'N/A'}</p>
+        `;
+        
+        // Set sentiment data
+        const sentimentEl = document.getElementById('sentimentDetails');
+        sentimentEl.innerHTML = `
+            <p><strong>Sentiment Score:</strong> ${data.sentiment_score.toFixed(3)}</p>
+            <p><strong>Analysis:</strong> ${data.sentiment_message}</p>
+        `;
+        
+        // Set position info if available
+        if (data.position_info) {
+            const positionEl = document.getElementById('positionInfo');
+            positionEl.innerHTML = `
+                <strong>💡 Suggestion:</strong> ${data.position_info.message}
+            `;
+            positionEl.style.display = 'block';
+        } else {
+            document.getElementById('positionInfo').style.display = 'none';
+        }
+        
+        // Display chart
+        if (data.chart) {
+            document.querySelector('.chart-container').style.display = 'block';
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(document.getElementById('stockChart'), data.chart);
+        } else {
+            document.querySelector('.chart-container').style.display = 'none';
+        }
+        
+        // Show results
+        document.getElementById('resultBox').style.display = 'block';
+    }
+
+    function getRecommendationClass(recommendation) {
+        switch(recommendation) {
+            case 'Buy': return 'bg-success';
+            case 'Sell/Short': return 'bg-danger';
+            case 'Hold': return 'bg-warning';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getScoreClass(score) {
+        if (score > 1.5) return 'score-positive';
+        if (score < -1.5) return 'score-negative';
+        return 'score-neutral';
+    }
+</script>
+</body>
+</html> 
