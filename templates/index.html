@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Stock Analysis Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        .container { max-width: 1200px; margin-top: 40px; }
+        .result-box { margin-top: 30px; }
+        .chart-container { margin-top: 30px; }
+        .technical-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+        .metric-card h6 { margin: 0; color: #495057; font-size: 0.9rem; }
+        .metric-card .value { font-size: 1.2rem; font-weight: bold; color: #212529; }
+        .position-info { background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .profit { color: #28a745; }
+        .loss { color: #dc3545; }
+        .sentiment-positive { color: #28a745; }
+        .sentiment-negative { color: #dc3545; }
+        .sentiment-neutral { color: #6c757d; }
+        .recommendation-buy { color: #28a745; font-weight: bold; }
+        .recommendation-sell { color: #dc3545; font-weight: bold; }
+        .recommendation-hold { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="mb-4 text-center">🚀 Advanced Stock Analysis Agent</h1>
+    
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="analysisTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button" role="tab">Stock Analysis</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="positions-tab" data-bs-toggle="tab" data-bs-target="#positions" type="button" role="tab">My Positions</button>
+        </li>
+    </ul>
+
+    <!-- Analysis Tab -->
+    <div class="tab-content" id="analysisTabsContent">
+        <div class="tab-pane fade show active" id="analysis" role="tabpanel">
+            <form id="stockForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="ticker" class="form-label">Stock Ticker</label>
+                            <input type="text" class="form-control" id="ticker" name="ticker" placeholder="e.g., TCS.NS, RELIANCE.NS, AAPL" required>
+                            <div class="form-text">For Indian stocks: Add .NS (e.g., RELIANCE.NS). For US stocks: Use symbol only (e.g., AAPL)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Position Management</label>
+                            <div>
+                                <input type="radio" id="ownYes" name="own" value="yes">
+                                <label for="ownYes">I own this stock</label>
+                                <input type="radio" id="ownNo" name="own" value="no" checked>
+                                <label for="ownNo">I don't own this stock</label>
+                            </div>
+                        </div>
+                        <div id="buyInfo" style="display:none;">
+                            <div class="mb-3">
+                                <label for="buyPrice" class="form-label">Buy Price</label>
+                                <input type="number" step="0.01" class="form-control" id="buyPrice" name="buyPrice" placeholder="Enter your buy price">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">🔍 Analyze Stock</button>
+            </form>
+
+            <!-- Enhanced Results -->
+            <div class="result-box" id="resultBox" style="display:none;">
+                <!-- Recommendation Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="mb-0">📊 Analysis Results</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4>Recommendation: <span id="recommendation" class="recommendation-hold"></span></h4>
+                                <h5>Confidence Score: <span id="score"></span></h5>
+                                <div id="sentimentInfo" class="mt-2"></div>
+                                <div id="analysisTime" class="mt-2 text-muted"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="positionInfo" class="position-info" style="display:none;">
+                                    <h5>💼 Position Status</h5>
+                                    <div id="positionDetails"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Analysis -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">📈 Technical Analysis</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="technical-grid" id="technicalGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Fundamental Data -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">🏢 Fundamental Data</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="technical-grid" id="fundamentalGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Reasons -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">💡 Analysis Reasons</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul id="reasons" class="list-group list-group-flush"></ul>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">📊 Price Chart</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="stockChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Positions Tab -->
+        <div class="tab-pane fade" id="positions" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>💼 My Positions</h3>
+                <button class="btn btn-outline-primary" onclick="loadPositions()">🔄 Refresh</button>
+            </div>
+            <div id="positionsList"></div>
+        </div>
+    </div>
+
+    <div id="errorBox" class="alert alert-danger mt-4" style="display:none;"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let chartInstance = null;
+
+    // Form handling
+    document.querySelectorAll('input[name="own"]').forEach(el => {
+        el.addEventListener('change', function() {
+            document.getElementById('buyInfo').style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+    });
+
+    // Stock analysis
+    document.getElementById('stockForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const resultBox = document.getElementById('resultBox');
+        const errorBox = document.getElementById('errorBox');
+        
+        if (resultBox) resultBox.style.display = 'none';
+        if (errorBox) errorBox.style.display = 'none';
+        
+        const ticker = document.getElementById('ticker').value.trim();
+        const ownElement = document.querySelector('input[name="own"]:checked');
+        const own = ownElement ? ownElement.value : 'no';
+        const buyPrice = own === 'yes' ? document.getElementById('buyPrice').value : '';
+        
+        // Show loading
+        if (resultBox) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>Analyzing stock...</p></div>';
+        }
+        
+        fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker, buy_price: buyPrice })
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (!data || !data.recommendation) {
+                throw new Error('No valid data returned from server');
+            }
+            
+            displayResults(data);
+        })
+        .catch(err => {
+            console.error('Error during analysis:', err);
+            if (errorBox) {
+                errorBox.textContent = 'Error: ' + err.message;
+                errorBox.style.display = 'block';
+            }
+            if (resultBox) {
+                resultBox.style.display = 'none';
+            }
+        });
+    });
+
+    function displayResults(data) {
+        try {
+            // Recommendation
+            const recommendationEl = document.getElementById('recommendation');
+            if (recommendationEl && data.recommendation) {
+                recommendationEl.textContent = data.recommendation;
+                recommendationEl.className = getRecommendationClass(data.recommendation);
+            }
+            
+            const scoreEl = document.getElementById('score');
+            if (scoreEl) {
+                scoreEl.textContent = data.score !== undefined ? data.score.toFixed(2) : 'N/A';
+            }
+            
+                    // Sentiment
+        const sentimentEl = document.getElementById('sentimentInfo');
+        if (sentimentEl && data.sentiment !== undefined) {
+            const sentimentClass = data.sentiment > 0.1 ? 'sentiment-positive' : 
+                                 data.sentiment < -0.1 ? 'sentiment-negative' : 'sentiment-neutral';
+            sentimentEl.innerHTML = `<span class="${sentimentClass}">📰 Market Sentiment: ${data.sentiment.toFixed(3)}</span>`;
+        }
+        
+        // Analysis time
+        const timeEl = document.getElementById('analysisTime');
+        if (timeEl && data.analysis_time !== undefined) {
+            timeEl.innerHTML = `<small>⏱️ Analysis completed in ${data.analysis_time}s</small>`;
+        }
+            
+            // Position info
+            const positionInfoEl = document.getElementById('positionInfo');
+            const positionDetailsEl = document.getElementById('positionDetails');
+            if (data.position_info && positionInfoEl && positionDetailsEl) {
+                positionInfoEl.style.display = 'block';
+                const profitLossClass = data.position_info.profit_loss > 0 ? 'profit' : 'loss';
+                positionDetailsEl.innerHTML = `
+                    <p><strong>Buy Price:</strong> ₹${data.position_info.buy_price.toFixed(2)}</p>
+                    <p><strong>Current Price:</strong> ₹${data.position_info.current_price.toFixed(2)}</p>
+                    <p><strong>P&L:</strong> <span class="${profitLossClass}">${data.position_info.profit_loss.toFixed(2)}%</span></p>
+                    <p><strong>Buy Date:</strong> ${data.position_info.buy_date}</p>
+                `;
+            } else if (positionInfoEl) {
+                positionInfoEl.style.display = 'none';
+            }
+            
+            // Technical analysis
+            if (data.technical_summary) {
+                displayTechnicalAnalysis(data.technical_summary);
+            }
+            
+            // Fundamental data
+            if (data.micro_data) {
+                displayFundamentalData(data.micro_data);
+            }
+            
+            // Reasons
+            const reasonsList = document.getElementById('reasons');
+            if (reasonsList && data.reasons && Array.isArray(data.reasons)) {
+                reasonsList.innerHTML = '';
+                data.reasons.forEach(r => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = r;
+                    reasonsList.appendChild(li);
+                });
+            }
+            
+            // Chart
+            const chartContainer = document.querySelector('.chart-container');
+            const stockChart = document.getElementById('stockChart');
+            if (data.chart && chartContainer && stockChart) {
+                chartContainer.style.display = 'block';
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(stockChart, data.chart);
+            } else if (chartContainer) {
+                chartContainer.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error displaying results:', error);
+            document.getElementById('errorBox').textContent = 'Error displaying results: ' + error.message;
+            document.getElementById('errorBox').style.display = 'block';
+        }
+    }
+
+    function displayTechnicalAnalysis(summary) {
+        try {
+            const grid = document.getElementById('technicalGrid');
+            if (!grid) {
+                console.error('Technical grid element not found');
+                return;
+            }
+            
+            grid.innerHTML = '';
+            
+            if (!summary || Object.keys(summary).length === 0) {
+                grid.innerHTML = '<p>No technical data available</p>';
+                return;
+            }
+            
+            const metrics = [
+                { key: 'current_price', label: 'Current Price', format: (v) => `₹${v.toFixed(2)}` },
+                { key: 'rsi', label: 'RSI', format: (v) => v ? v.toFixed(1) : 'N/A' },
+                { key: 'macd', label: 'MACD', format: (v) => v ? v.toFixed(3) : 'N/A' },
+                { key: 'volume_ratio', label: 'Volume Ratio', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'bb_position', label: 'BB Position', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'stoch_k', label: 'Stoch %K', format: (v) => v ? v.toFixed(1) : 'N/A' },
+                { key: 'atr', label: 'ATR', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'support', label: 'Support', format: (v) => v ? `₹${v.toFixed(2)}` : 'N/A' },
+                { key: 'resistance', label: 'Resistance', format: (v) => v ? `₹${v.toFixed(2)}` : 'N/A' }
+            ];
+            
+            metrics.forEach(metric => {
+                if (summary[metric.key] !== undefined && summary[metric.key] !== null) {
+                    const card = document.createElement('div');
+                    card.className = 'metric-card';
+                    card.innerHTML = `
+                        <h6>${metric.label}</h6>
+                        <div class="value">${metric.format(summary[metric.key])}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+            });
+        } catch (error) {
+            console.error('Error displaying technical analysis:', error);
+        }
+    }
+
+    function displayFundamentalData(microData) {
+        try {
+            const grid = document.getElementById('fundamentalGrid');
+            if (!grid) {
+                console.error('Fundamental grid element not found');
+                return;
+            }
+            
+            grid.innerHTML = '';
+            
+            if (!microData || Object.keys(microData).length === 0) {
+                grid.innerHTML = '<p>No fundamental data available</p>';
+                return;
+            }
+            
+            const metrics = [
+                { key: 'pe_ratio', label: 'P/E Ratio', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'forward_pe', label: 'Forward P/E', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'dividend_yield', label: 'Dividend Yield', format: (v) => v ? `${(v*100).toFixed(2)}%` : 'N/A' },
+                { key: 'price_to_book', label: 'P/B Ratio', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'market_cap', label: 'Market Cap', format: (v) => v ? formatMarketCap(v) : 'N/A' },
+                { key: 'beta', label: 'Beta', format: (v) => v ? v.toFixed(2) : 'N/A' },
+                { key: 'roe', label: 'ROE', format: (v) => v ? `${(v*100).toFixed(2)}%` : 'N/A' },
+                { key: 'profit_margin', label: 'Profit Margin', format: (v) => v ? `${(v*100).toFixed(2)}%` : 'N/A' }
+            ];
+            
+            metrics.forEach(metric => {
+                if (microData[metric.key] !== undefined && microData[metric.key] !== null) {
+                    const card = document.createElement('div');
+                    card.className = 'metric-card';
+                    card.innerHTML = `
+                        <h6>${metric.label}</h6>
+                        <div class="value">${metric.format(microData[metric.key])}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+            });
+        } catch (error) {
+            console.error('Error displaying fundamental data:', error);
+        }
+    }
+
+    function formatMarketCap(value) {
+        if (value >= 1e12) return `₹${(value/1e12).toFixed(2)}T`;
+        if (value >= 1e9) return `₹${(value/1e9).toFixed(2)}B`;
+        if (value >= 1e6) return `₹${(value/1e6).toFixed(2)}M`;
+        return `₹${value.toFixed(0)}`;
+    }
+
+    function getRecommendationClass(recommendation) {
+        if (recommendation.includes('Buy')) return 'recommendation-buy';
+        if (recommendation.includes('Sell')) return 'recommendation-sell';
+        return 'recommendation-hold';
+    }
+
+    // Positions management
+    function loadPositions() {
+        fetch('/positions')
+            .then(res => res.json())
+            .then(positions => {
+                displayPositions(positions);
+            })
+            .catch(err => {
+                console.error('Error loading positions:', err);
+                document.getElementById('positionsList').innerHTML = '<div class="alert alert-danger">Error loading positions</div>';
+            });
+    }
+
+    function displayPositions(positions) {
+        const container = document.getElementById('positionsList');
+        
+        if (positions.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">No positions tracked yet.</div>';
+            return;
+        }
+        
+        let html = '<div class="row">';
+        positions.forEach(pos => {
+            const profitLossClass = pos.profit_loss > 0 ? 'profit' : 'loss';
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${pos.ticker}</h5>
+                            <p><strong>Buy Price:</strong> ₹${pos.buy_price.toFixed(2)}</p>
+                            <p><strong>Current Price:</strong> ₹${pos.current_price.toFixed(2)}</p>
+                            <p><strong>P&L:</strong> <span class="${profitLossClass}">${pos.profit_loss.toFixed(2)}%</span></p>
+                            <p><strong>Buy Date:</strong> ${pos.buy_date}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // Load positions when positions tab is shown
+    document.getElementById('positions-tab').addEventListener('click', loadPositions);
+</script>
+</body>
+</html> 

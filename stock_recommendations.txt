@@ -338,3 +338,34 @@ Reasons:
 - High inflation (CPI > 300)
 - High P/E ratio (>30)
 - Attractive dividend yield (>=2%)
+
+--- Recommendations on 2025-06-22 02:53:53 ---
+ASIANPAINT.NS: Hold (Score: -1.0)
+Reasons:
+- Short-term bullish trend (Close > MA20)
+- Long-term bearish trend (Close < MA50)
+- High Treasury yield (>4%)
+- High inflation (CPI > 300)
+- High P/E ratio (>30)
+- Attractive dividend yield (>=2%)
+
+--- Recommendations on 2025-07-21 16:22:53 ---
+DIXON.NS: Hold (Score: -1.0)
+Reasons:
+- Short-term bullish trend (Close > MA20)
+- Long-term bullish trend (Close > MA50)
+- Overbought (RSI > 70)
+- High Treasury yield (>4%)
+- High inflation (CPI > 300)
+- High P/E ratio (>30)
+- Attractive dividend yield (>=2%)
+
+--- Recommendations on 2025-07-27 05:05:08 ---
+TCS.NS: Hold (Score: -1.0)
+Reasons:
+- Short-term bearish trend (Close < MA20)
+- Long-term bearish trend (Close < MA50)
+- Oversold (RSI < 30)
+- High Treasury yield (>4%)
+- High inflation (CPI > 300)
+- Attractive dividend yield (>=2%)
